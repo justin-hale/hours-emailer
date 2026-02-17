@@ -211,7 +211,7 @@
       templateId: "__EMAILJS_TEMPLATE_ID__",
       publicKey:  "__EMAILJS_PUBLIC_KEY__",
       recipients: "__RECIPIENT_EMAILS__",
-      sitePassword: "__SITE_PASSWORD__"
+      passwordHash: "__SITE_PASSWORD_HASH__"
     };
 
     // --- Password gate ---
@@ -222,8 +222,15 @@
       const unlockBtn = document.getElementById("unlock-btn");
       const lockError = document.getElementById("lock-error");
 
-      function unlock() {
-        if (pwInput.value === CONFIG.sitePassword) {
+      async function sha256(text) {
+        const data = new TextEncoder().encode(text);
+        const hash = await crypto.subtle.digest("SHA-256", data);
+        return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+      }
+
+      async function unlock() {
+        const inputHash = await sha256(pwInput.value);
+        if (inputHash === CONFIG.passwordHash) {
           lockScreen.style.display = "none";
           app.style.display = "";
           sessionStorage.setItem("authed", "1");
