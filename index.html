@@ -196,9 +196,9 @@
       days.forEach(d => { vals[d] = parseFloat(document.getElementById(d).value) || 0; });
       const total = Object.values(vals).reduce((a, b) => a + b, 0);
 
-      // Format date as MM/DD/YYYY
+      // Format date as MM-DD-YYYY (dashes to avoid EmailJS encoding slashes)
       const [y, m, d] = dateInput.value.split("-");
-      const dateStr = `${m}/${d}/${y}`;
+      const dateStr = `${m}-${d}-${y}`;
 
       const subject = `Hours Worked ${dateStr}`;
       const body =
