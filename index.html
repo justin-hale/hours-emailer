@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Hours Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .field {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      font-size: 0.95rem;
+    }
+
+    input[type="number"],
+    input[type="date"] {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    input[type="number"]:focus,
+    input[type="date"]:focus {
+      outline: none;
+      border-color: #4361ee;
+      box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 0.75rem 0;
+      margin-bottom: 0.5rem;
+      border-top: 2px solid #e9ecef;
+    }
+
+    .btn-send {
+      display: block;
+      width: 100%;
+      padding: 0.75rem;
+      background: #4361ee;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-send:hover {
+      background: #3a56d4;
+    }
+
+    .btn-send:disabled {
+      background: #a0aec0;
+      cursor: not-allowed;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      min-height: 1.4em;
+    }
+
+    .status.success { color: #2d6a4f; }
+    .status.error   { color: #c1121f; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Weekly Hours</h1>
+
+    <div class="field">
+      <label for="week-date">Week Of</label>
+      <input type="date" id="week-date">
+    </div>
+
+    <div class="field">
+      <label for="mon">Monday</label>
+      <input type="number" id="mon" value="8" min="0" max="24" step="0.5">
+    </div>
+
+    <div class="field">
+      <label for="tue">Tuesday</label>
+      <input type="number" id="tue" value="8" min="0" max="24" step="0.5">
+    </div>
+
+    <div class="field">
+      <label for="wed">Wednesday</label>
+      <input type="number" id="wed" value="8" min="0" max="24" step="0.5">
+    </div>
+
+    <div class="field">
+      <label for="thu">Thursday</label>
+      <input type="number" id="thu" value="8" min="0" max="24" step="0.5">
+    </div>
+
+    <div class="field">
+      <label for="fri">Friday</label>
+      <input type="number" id="fri" value="8" min="0" max="24" step="0.5">
+    </div>
+
+    <div class="total-row">
+      <span>Total</span>
+      <span id="total">40</span>
+    </div>
+
+    <button class="btn-send" id="send-btn">Send</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    // --- Config injected at build time by GitHub Actions ---
+    const CONFIG = {
+      serviceId:  "__EMAILJS_SERVICE_ID__",
+      templateId: "__EMAILJS_TEMPLATE_ID__",
+      publicKey:  "__EMAILJS_PUBLIC_KEY__",
+      recipients: "__RECIPIENT_EMAILS__"
+    };
+
+    // --- Init EmailJS ---
+    emailjs.init(CONFIG.publicKey);
+
+    // --- Date default: today ---
+    const dateInput = document.getElementById("week-date");
+    const today = new Date();
+    dateInput.value = today.toISOString().slice(0, 10);
+
+    // --- Live total calculation ---
+    const days = ["mon", "tue", "wed", "thu", "fri"];
+    const inputs = days.map(d => document.getElementById(d));
+    const totalEl = document.getElementById("total");
+
+    function recalcTotal() {
+      const sum = inputs.reduce((acc, el) => acc + (parseFloat(el.value) || 0), 0);
+      totalEl.textContent = sum;
+    }
+
+    inputs.forEach(el => el.addEventListener("input", recalcTotal));
+
+    // --- Send email ---
+    const sendBtn  = document.getElementById("send-btn");
+    const statusEl = document.getElementById("status");
+
+    sendBtn.addEventListener("click", async () => {
+      statusEl.textContent = "";
+      statusEl.className = "status";
+
+      // Gather values
+      const vals = {};
+      days.forEach(d => { vals[d] = parseFloat(document.getElementById(d).value) || 0; });
+      const total = Object.values(vals).reduce((a, b) => a + b, 0);
+
+      // Format date as MM/DD/YYYY
+      const [y, m, d] = dateInput.value.split("-");
+      const dateStr = `${m}/${d}/${y}`;
+
+      const subject = `Hours Worked ${dateStr}`;
+      const body =
+        `Total: ${total}\n` +
+        `Mon: ${vals.mon}\n` +
+        `Tue: ${vals.tue}\n` +
+        `Wed: ${vals.wed}\n` +
+        `Thu: ${vals.thu}\n` +
+        `Fri: ${vals.fri}`;
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Sending\u2026";
+
+      try {
+        await emailjs.send(CONFIG.serviceId, CONFIG.templateId, {
+          to_emails:  CONFIG.recipients,
+          subject:    subject,
+          body:       body
+        });
+        statusEl.textContent = "Email sent!";
+        statusEl.className = "status success";
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "Failed to send. Check console for details.";
+        statusEl.className = "status error";
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Send";
+      }
+    });
+  </script>
+</body>
+</html>
