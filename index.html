@@ -109,10 +109,60 @@
 
     .status.success { color: #2d6a4f; }
     .status.error   { color: #c1121f; }
+
+    /* --- Password gate --- */
+    #lock-screen {
+      position: fixed;
+      inset: 0;
+      background: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    #lock-screen .card {
+      text-align: center;
+    }
+
+    #lock-screen input[type="password"] {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    #lock-screen input[type="password"]:focus {
+      outline: none;
+      border-color: #4361ee;
+      box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+    }
+
+    #lock-screen .error {
+      color: #c1121f;
+      font-size: 0.9rem;
+      min-height: 1.4em;
+      margin-top: 0.5rem;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
+  <!-- Password gate -->
+  <div id="lock-screen">
+    <div class="card">
+      <h1>Weekly Hours</h1>
+      <div class="field">
+        <label for="site-password">Password</label>
+        <input type="password" id="site-password" placeholder="Enter password" autofocus>
+      </div>
+      <button class="btn-send" id="unlock-btn">Unlock</button>
+      <div class="error" id="lock-error"></div>
+    </div>
+  </div>
+
+  <div class="card" id="app" style="display:none;">
     <h1>Weekly Hours</h1>
 
     <div class="field">
@@ -160,8 +210,41 @@
       serviceId:  "__EMAILJS_SERVICE_ID__",
       templateId: "__EMAILJS_TEMPLATE_ID__",
       publicKey:  "__EMAILJS_PUBLIC_KEY__",
-      recipients: "__RECIPIENT_EMAILS__"
+      recipients: "__RECIPIENT_EMAILS__",
+      sitePassword: "__SITE_PASSWORD__"
     };
+
+    // --- Password gate ---
+    (function () {
+      const lockScreen = document.getElementById("lock-screen");
+      const app = document.getElementById("app");
+      const pwInput = document.getElementById("site-password");
+      const unlockBtn = document.getElementById("unlock-btn");
+      const lockError = document.getElementById("lock-error");
+
+      function unlock() {
+        if (pwInput.value === CONFIG.sitePassword) {
+          lockScreen.style.display = "none";
+          app.style.display = "";
+          sessionStorage.setItem("authed", "1");
+        } else {
+          lockError.textContent = "Incorrect password.";
+          pwInput.value = "";
+          pwInput.focus();
+        }
+      }
+
+      // Auto-unlock if already authenticated this session
+      if (sessionStorage.getItem("authed") === "1") {
+        lockScreen.style.display = "none";
+        app.style.display = "";
+      }
+
+      unlockBtn.addEventListener("click", unlock);
+      pwInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") unlock();
+      });
+    })();
 
     // --- Init EmailJS ---
     emailjs.init(CONFIG.publicKey);
