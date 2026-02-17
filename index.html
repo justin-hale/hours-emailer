@@ -301,10 +301,17 @@
     // --- Init EmailJS ---
     emailjs.init(CONFIG.publicKey);
 
-    // --- Date default: today ---
+    // --- Date default: nearest Friday ---
+    // Sat-Tue → previous Friday; Wed-Fri → current week's Friday
     const dateInput = document.getElementById("week-date");
     const today = new Date();
-    dateInput.value = today.toISOString().slice(0, 10);
+    const day = today.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+    const daysToFriday = day <= 2
+      ? -(day + 2)   // Sun(-2), Mon(-3), Tue(-4) → go back to prev Fri
+      : 5 - day;     // Wed(+2), Thu(+1), Fri(0), Sat(-1)
+    const friday = new Date(today);
+    friday.setDate(today.getDate() + daysToFriday);
+    dateInput.value = friday.toISOString().slice(0, 10);
 
     // --- Live total calculation ---
     const days = ["mon", "tue", "wed", "thu", "fri"];
